@@ -18,36 +18,73 @@
 typedef enum {false,true} bool;
 
 bool done = false;
+bool receiving = false;
 int n;
+int value;
+int routerNum = 1;
+char buffer[256];
 
 void error(const char *msg)
 {
     perror(msg);
     exit(1);
 }
-void enterLoop( void* buffer,unsigned long newsockfd){
+void enterLoop( void* buffer, unsigned long newsockfd){
     bool takeRouterNumber = false;
     int clientRouter;
+    int routerInitVal[4][3];
+    int i = 0;
     while(!done){
-        int router;
         bzero(buffer,256);
-        n = read(newsockfd,buffer,255);
-        if (n < 0) {printf("Disconnected"); done = true; continue;};
+        n = read(newsockfd, &value, 4);
         
-        if(sizeof(buffer) > 0) {
-            if(takeRouterNumber) clientRouter = atoi(buffer);
-            if(router == 0) {
-                printf("\nAM I SUPPOSED TO BE HERE?! \n");
-                takeRouterNumber = true;
-            }
-            router = strcmp(buffer, "router");
-            
-            printf("%s", buffer);
+        if (n <= 0) {
+            printf("Disconnected");
+            done = true;
+            continue;
         };
         
-        n = write(newsockfd,"I got your message",18);
-        
+      
+        if(sizeof(buffer) > 0) {
+//        printf("size of buffer : %lu \n", sizeof(buffer) );
+            if(i == 3) {printf("\n"); i = 0; }
+            if (value == 17481) {
+                read(newsockfd, &value, 4);
+                    printf("------ Router %d has connected------ \n\n", value );
+            }else if((value == 476233) || (value == 30313) ||  (value == 22089)) {
+                
+                receiving = true;
+                printf("Receiving the intial router values...\n");
+                
+                continue;
+            } else if (value == 20038){
+                receiving = false;
+                printf("Complete...\n");
+                bzero((int *) &value, 4);
+                bzero(buffer,256);
+                continue;
+                
+            }else if ((value < -2) || (value > 10)){
+                bzero((int *) &value, 4);
+                bzero(buffer,256);
+                continue;
+            }else {
+                if(receiving){
+                    printf(" %d ",value);
+                    i++;
+                 
+                } else {
+                    i = 0;
+                }
+                bzero((int *) &value, 4);
+                bzero(buffer,256);
+                   continue;
+            }
+            bzero((int *) &value, 4);
+            bzero(buffer,256);
+        };
     }
+bzero((int *) &value, 4);
 }
 
 
@@ -57,7 +94,8 @@ int main(int argc, char *argv[])
     
     int sockfd, newsockfd, portno;
     socklen_t clilen;
-    char buffer[256];
+    
+    
     struct sockaddr_in serv_addr, cli_addr;
     
     if (argc < 2) {
@@ -90,11 +128,13 @@ int main(int argc, char *argv[])
                        &clilen);
     if (newsockfd < 0) error("ERROR on accept");
     
+    
     enterLoop(buffer, newsockfd);
 
 
     
     while(done){
+        bzero((int *) &value, 4);
         close(newsockfd);
         close(sockfd);
         sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -112,7 +152,7 @@ int main(int argc, char *argv[])
         serv_addr.sin_port = htons(portno);
         if (bind(sockfd, (struct sockaddr *) &serv_addr,
                  sizeof(serv_addr)) < 0)
-            error("ERROR on binding");
+            continue;
         
         listen(sockfd,5);
         clilen = sizeof(cli_addr);
@@ -124,9 +164,11 @@ int main(int argc, char *argv[])
 
         done = false;
         enterLoop(buffer, newsockfd);
-
+        close(newsockfd);
+        close(sockfd);
+        bzero((int *) &value, 4);
     }
-   
+   bzero((int *) &value, sizeof(value));
     
     return 0;
 }

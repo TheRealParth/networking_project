@@ -15,6 +15,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include <time.h>
+
 
 void error(const char *msg)
 {
@@ -24,6 +26,7 @@ void error(const char *msg)
 
 int main(int argc, char *argv[])
 {
+    int routerNum = 0;
     int sockfd, portno, n;
     struct sockaddr_in serv_addr;
     struct hostent *server;
@@ -52,24 +55,54 @@ int main(int argc, char *argv[])
     if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0)
         error("ERROR connecting");
     printf("\n");
-    write(sockfd,"Router 0",strlen("Router 0"));
+    //tell the server we're sending the router #
+    write(sockfd,"ID",2);
+    //send the router number
+    write(sockfd, &routerNum, sizeof(routerNum));
     printf("R       :      I      :      L\n");
     printf("0       :      0      :      0\n");
     printf("1       :      0      :      1\n");
     printf("2       :      1      :      3\n");
     printf("3       :      2      :      7\n\n");
-    printf("Please enter the message: ");
-    bzero(buffer,256);
-    fgets(buffer,255,stdin);
+    int initValues[4][3] = {{0, -1, 0},{1,0,1},{2,1,3},{3,2,7}};
     
-    n = write(sockfd,buffer,strlen(buffer));
+    //tell the server we're sending the initial values
+    write(sockfd,"IV",2);
+//    
+//    clock_t start = clock(), diff;
+//    diff = clock() - start;
+//    
+//    int msec = diff * 1000 / CLOCKS_PER_SEC;
+//    printf("Time taken %d seconds %d milliseconds", msec/1000, msec%1000);
+//    int  testVal= 12;
+//    printf("Please enter the message: ");
+//    bzero(buffer,256);
+//    fgets(buffer,255,stdin);
+    
+    
+//    write(sockfd, &testVal, sizeof(testVal));
+//
+    printf("\n");
+    for(int i = 0; i < 4; i++){
+        for(int j = 0; j < 3; j++){
+            n = write(sockfd, &initValues[i][j], sizeof(initValues[i][j]));
+            if (n < 0)
+                error("ERROR reading from socket");
+            printf(" %d ", initValues[i][j]);
+        }
+        printf("\n");
+    }
+    
+   n = write(sockfd, "FN", 2);
+//    n = write(sockfd,&initValues,sizeof(initValues));
+    
     if (n < 0)
         error("ERROR writing to socket");
     bzero(buffer,256);
-    n = read(sockfd,buffer,255);
+//    n = read(sockfd,buffer,255);
     if (n < 0)
         error("ERROR reading from socket");
-    printf("%s\n",buffer);
+    
     close(sockfd);
     return 0;
 }
