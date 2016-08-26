@@ -25,7 +25,7 @@ void error(const char *msg)
 }
 
 int main(int argc, char *argv[])
-{
+{   int value;
     int routerNum = 0;
     int sockfd, portno, n;
     struct sockaddr_in serv_addr;
@@ -87,8 +87,15 @@ int main(int argc, char *argv[])
         for(int j = 0; j < 3; j++){
             n = write(sockfd, &initValues[i][j], sizeof(initValues[i][j]));
             if (n < 0)
-                error("ERROR reading from socket");
+                error("ERROR writing to socket");
             printf(" %d ", initValues[i][j]);
+             n = read(sockfd, &value, sizeof(value));
+            if(n<0)
+                error("ERROR reading from socket");
+            if(value != initValues[i][j]){
+                j--;
+            }
+                
         }
         printf("\n");
     }
