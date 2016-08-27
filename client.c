@@ -18,20 +18,60 @@
 #include <time.h>
 
 
+typedef enum {false,true} bool;
+
+bool done = false;
+bool receiving = false;
+int value;
+int routerNum = 0;
+int sockfd, portno, n;
+struct sockaddr_in serv_addr;
+struct hostent *server;
+char buffer[256];
+int initValues[4][3] = {{0, -1, 0},{1,0,1},{2,1,3},{3,2,7}};
+
 void error(const char *msg)
 {
     perror(msg);
     exit(0);
 }
 
-int main(int argc, char *argv[])
-{   int value;
-    int routerNum = 0;
-    int sockfd, portno, n;
-    struct sockaddr_in serv_addr;
-    struct hostent *server;
+void printVal(){
+    printf("R       :      I      :      L\n");
+    printf("------------------------------\n");
+    printf("0       :    Local    :      0\n");
+    printf("1       :      0      :      1\n");
+    printf("2       :      1      :      3\n");
+    printf("3       :      2      :      7\n\n");
+}
+void give() {
+    //======SEND ROUTER ID NOTICE
+    n = write(sockfd,"ID",2);
+    if (n < 0)
+        error("ERROR writing to socket");
     
-    char buffer[256];
+    //======READ RECEIPT OF ID NOTICE
+    n = read(sockfd, &value, sizeof(value));
+    if (n < 0)
+        error("ERROR reading from socket");
+    
+    //======SEND ROUTER ID
+    if(value == 2){
+        n = write(sockfd, &routerNum, sizeof(routerNum));
+        if (n < 0)
+            error("ERROR writing to socket");
+    }
+    //======CONFIRM DATA RECEIVED
+    n = read(sockfd, &value, sizeof(value));
+    if (n < 0)
+        error("ERROR reading from socket");
+}
+
+
+int main(int argc, char *argv[])
+{
+    
+    //=======PRE LAUNCH JARGON
     if (argc < 3) {
         fprintf(stderr,"usage %s hostname port\n", argv[0]);
         exit(0);
@@ -52,35 +92,54 @@ int main(int argc, char *argv[])
           server->h_length);
     serv_addr.sin_port = htons(portno);
     printf("\nThis is router 0. \n\n");
-    if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0)
-        error("ERROR connecting");
+    if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0) error("ERROR connecting");
     printf("\n");
-    //tell the server we're sending the router #
-    write(sockfd,"ID",2);
-    //send the router number
-    write(sockfd, &routerNum, sizeof(routerNum));
-    printf("R       :      I      :      L\n");
-    printf("------------------------------\n");
-    printf("0       :    Local    :      0\n");
-    printf("1       :      0      :      1\n");
-    printf("2       :      1      :      3\n");
-    printf("3       :      2      :      7\n\n");
+    //=======PRE LAUNCH JARGON ENDS
     
-    int initValues[4][3] = {{0, -1, 0},{1,0,1},{2,1,3},{3,2,7}};
     
-    //tell the server we're sending the initial values
-   n = write(sockfd,"IV",2);
+    
+    //======SEND ROUTER ID NOTICE
+    n = write(sockfd,"ID",2);
     if (n < 0)
         error("ERROR writing to socket");
+    
+    //======READ RECEIPT OF ID NOTICE
+    n = read(sockfd, &value, sizeof(value));
+    if (n < 0)
+        error("ERROR reading from socket");
+    
+    //======SEND ROUTER ID
+    if(value == 2){
+        n = write(sockfd, &routerNum, sizeof(routerNum));
+        if (n < 0)
+            error("ERROR writing to socket");
+    } else {
+        printf("WTF IS HAPPENING %i", value);
+        error("RECEIPT OF ID NOTICE SHOULD RETURN 2");
+    }
+    //======CONFIRM DATA RECEIVED
+    n = read(sockfd, &value, sizeof(value));
+    if (n < 0)
+        error("ERROR reading from socket");
+    if (value != routerNum){
+        error("NON MATCHING ROUTER ID, value DOES NOT EQUAL routerNum");
+    }
+    
+    //======SEND NOTICE FOR INITIAL VALUES
+    n = write(sockfd,"IV",2);
+    if (n < 0)
+        error("ERROR writing to socket");
+    //======READ RECEIPT OF INTIAL VALUES NOTICE
     n = read(sockfd, &value, sizeof(value));
     if(n<0)
         error("ERROR reading from socket");
-     while((value == 476233) || (value == 30313) ||  (value == 22089)) {
     
+    //======SEND INIT VALUES
+    if(value == 2){
          for(int i = 0; i < 4; i++){
              for(int j = 0; j < 3; j++){
                  n = write(sockfd, &initValues[i][j], sizeof(initValues[i][j]));
-            if (n < 0)
+                 if (n < 0)
                      error("ERROR writing to socket");
                  n = read(sockfd, &value, sizeof(value));
             if(n<0)
@@ -88,36 +147,66 @@ int main(int argc, char *argv[])
             if(value != initValues[i][j]){
                 j--;
             }
-            
             }
             printf("\n");
         }
-     }
-//
-//    clock_t start = clock(), diff;
-//    diff = clock() - start;
-//    
-//    int msec = diff * 1000 / CLOCKS_PER_SEC;
-//    printf("Time taken %d seconds %d milliseconds", msec/1000, msec%1000);
-//    int  testVal= 12;
-//    printf("Please enter the message: ");
-//    bzero(buffer,256);
-//    fgets(buffer,255,stdin);
+    } else {
+        error("RETURN VALUE INVALID SHOULD = 2 ");
+    }
     
-    
-//    write(sockfd, &testVal, sizeof(testVal));
-//
-
-    
-   n = write(sockfd, "FN", 2);
-//    n = write(sockfd,&initValues,sizeof(initValues));
-    
+    //======SEND NOTICE OF FINISH
+    n = write(sockfd, "FN", 2);
     if (n < 0)
         error("ERROR writing to socket");
+    
+    
     bzero(buffer,256);
 //    n = read(sockfd,buffer,255);
-    if (n < 0)
-        error("ERROR reading from socket");
+//    if (n < 0)
+//        error("ERROR reading from socket");
+    
+//    while(!done){
+//        bzero(buffer,256);
+//        n = read(newsockfd, &value, sizeof(value));
+//        if (n <= 0) {
+//            printf("Disconnected");
+//            done = true;
+//            continue;
+//        };
+//        
+//        if(sizeof(buffer) > 0) {
+//            if(i == 3) {printf("\n"); i = 0; }
+//            if (value == 17481) {
+//                read(newsockfd, &value, sizeof(value));
+//                printf("------ Router %d has connected ------- \n\n", value );
+//            }else if((value == 476233) || (value == 30313) ||  (value == 22089)) {
+//                receiving = true;
+//                printf("Receiving the intial router values...\n");
+//                n = write(newsockfd, &value, sizeof(value));
+//                if(n < 0)
+//                    error("ERROR writing back to client");
+//                continue;
+//            } else if (value == 20038){
+//                receiving = false;
+//                printf("Complete...\n");
+//                continue;
+//            }else if ((value < -2) || (value > 10)){
+//                continue;
+//            }else {
+//                if(receiving){
+//                    printf(" %d ",value);
+//                    n = write(newsockfd, &value, sizeof(value));
+//                    if(n < 0)
+//                        error("ERROR writing back to client");
+//                    i++;
+//                } else {
+//                    i = 0;
+//                }
+//                continue;
+//            }
+//        };
+//    }
+
     
     close(sockfd);
     return 0;
