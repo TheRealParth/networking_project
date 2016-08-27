@@ -46,46 +46,37 @@ void enterLoop( void* buffer, unsigned long newsockfd){
         
       
         if(sizeof(buffer) > 0) {
-//        printf("size of buffer : %lu \n", sizeof(buffer) );
             if(i == 3) {printf("\n"); i = 0; }
             if (value == 17481) {
                 read(newsockfd, &value, sizeof(value));
                     printf("------ Router %d has connected------ \n\n", value );
             }else if((value == 476233) || (value == 30313) ||  (value == 22089)) {
-                
                 receiving = true;
                 printf("Receiving the intial router values...\n");
-                
+                n = write(newsockfd, &value, sizeof(value));
+                if(n < 0)
+                    error("ERROR writing back to client");
                 continue;
             } else if (value == 20038){
                 receiving = false;
                 printf("Complete...\n");
-                bzero((int *) &value, sizeof(value));
-                bzero(buffer,256);
                 continue;
-                
             }else if ((value < -2) || (value > 10)){
-                bzero((int *) &value, sizeof(value));
-                bzero(buffer,256);
                 continue;
             }else {
                 if(receiving){
-                    
                     printf(" %d ",value);
                     n = write(newsockfd, &value, sizeof(value));
                     if(n < 0)
                         error("ERROR writing back to client");
-                    i++;
-                 
+                        i++;
                 } else {
                     i = 0;
                 }
-                bzero((int *) &value, sizeof(value));
-                bzero(buffer,256);
-                   continue;
+                continue;
             }
-            bzero((int *) &value, sizeof(value));
-            bzero(buffer,256);
+            
+            
         };
     }
 bzero((int *) &value, sizeof(value));
@@ -138,7 +129,6 @@ int main(int argc, char *argv[])
 
     
     while(done){
-        bzero((int *) &value, sizeof(value));
         close(newsockfd);
         close(sockfd);
         sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -172,7 +162,7 @@ int main(int argc, char *argv[])
         close(sockfd);
         bzero((int *) &value, sizeof(value));
     }
-   bzero((int *) &value, sizeof(value));
+   
     
     return 0;
 }

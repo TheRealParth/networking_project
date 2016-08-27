@@ -60,15 +60,40 @@ int main(int argc, char *argv[])
     //send the router number
     write(sockfd, &routerNum, sizeof(routerNum));
     printf("R       :      I      :      L\n");
-    printf("0       :      0      :      0\n");
+    printf("------------------------------\n");
+    printf("0       :    Local    :      0\n");
     printf("1       :      0      :      1\n");
     printf("2       :      1      :      3\n");
     printf("3       :      2      :      7\n\n");
+    
     int initValues[4][3] = {{0, -1, 0},{1,0,1},{2,1,3},{3,2,7}};
     
     //tell the server we're sending the initial values
-    write(sockfd,"IV",2);
-//    
+   n = write(sockfd,"IV",2);
+    if (n < 0)
+        error("ERROR writing to socket");
+    n = read(sockfd, &value, sizeof(value));
+    if(n<0)
+        error("ERROR reading from socket");
+     while((value == 476233) || (value == 30313) ||  (value == 22089)) {
+    
+         for(int i = 0; i < 4; i++){
+             for(int j = 0; j < 3; j++){
+                 n = write(sockfd, &initValues[i][j], sizeof(initValues[i][j]));
+            if (n < 0)
+                     error("ERROR writing to socket");
+                 n = read(sockfd, &value, sizeof(value));
+            if(n<0)
+                error("ERROR reading from socket");
+            if(value != initValues[i][j]){
+                j--;
+            }
+            
+            }
+            printf("\n");
+        }
+     }
+//
 //    clock_t start = clock(), diff;
 //    diff = clock() - start;
 //    
@@ -82,23 +107,7 @@ int main(int argc, char *argv[])
     
 //    write(sockfd, &testVal, sizeof(testVal));
 //
-    printf("\n");
-    for(int i = 0; i < 4; i++){
-        for(int j = 0; j < 3; j++){
-            n = write(sockfd, &initValues[i][j], sizeof(initValues[i][j]));
-            if (n < 0)
-                error("ERROR writing to socket");
-            printf(" %d ", initValues[i][j]);
-             n = read(sockfd, &value, sizeof(value));
-            if(n<0)
-                error("ERROR reading from socket");
-            if(value != initValues[i][j]){
-                j--;
-            }
-                
-        }
-        printf("\n");
-    }
+
     
    n = write(sockfd, "FN", 2);
 //    n = write(sockfd,&initValues,sizeof(initValues));
