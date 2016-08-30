@@ -199,7 +199,8 @@ void enterLoop( void* buffer, unsigned long newsockfd){
                     error("ERROR writing back to client");
                 //PRINT THE CURRENT VALUES
                 printValues0();
-                
+                printf("\n\n");
+                printValues();
                 sendToClient();
                 
 //                close(newsockfd);
